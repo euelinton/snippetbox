@@ -15,12 +15,12 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	}
 	tmpl, err := template.ParseFiles(files...)
 	if err != nil {
-		app.logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+		app.serverError(w, r, err)
 		http.Error(w, "Erro interno no servidor", http.StatusInternalServerError)
 	}
 	err = tmpl.ExecuteTemplate(w, "base", nil)
 	if err != nil {
-		app.logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+		app.serverError(w, r, err)
 		http.Error(w, "Erro interno no servidor", http.StatusInternalServerError)
 	}
 }
