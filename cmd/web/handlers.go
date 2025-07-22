@@ -11,6 +11,13 @@ import (
 	"github.com/euelinton/snippetbox/internal/models"
 )
 
+type snippetCreateForm struct {
+	Title       string
+	Content     string
+	Expires     int
+	FieldErrors map[string]string
+}
+
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	snippets, err := app.snippets.Latest()
 	if err != nil {
@@ -59,37 +66,40 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	title := r.PostForm.Get("title")
-	content := r.PostForm.Get("content")
-
 	expires, err := strconv.Atoi(r.PostForm.Get("expires"))
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
-	fieldErrors := make(map[string]string)
-
-	if strings.TrimSpace(title) == "" {
-		fieldErrors["title"] = "O campo não pode ser vazio"
-	} else if utf8.RuneCountInString(title) > 100 {
-		fieldErrors["title"] = "O campo não pode ter mais de 100 caracteries"
+	form := snippetCreateForm{
+		Title:       r.PostForm.Get("title"),
+		Content:     r.PostForm.Get("content"),
+		Expires:     expires,
+		FieldErrors: map[string]string{},
 	}
 
-	if strings.TrimSpace(content) == "" {
-		fieldErrors["content"] = "O campo não pode ser vazio"
+	if strings.TrimSpace(form.Title) == "" {
+		form.FieldErrors["title"] = "O campo não pode ser vazio"
+	} else if utf8.RuneCountInString(form.Title) > 100 {
+		form.FieldErrors["title"] = "O campo não pode ter mais de 100 caracteries"
+	}
+
+	if strings.TrimSpace(form.Content) == "" {
+		form.FieldErrors["content"] = "O campo não pode ser vazio"
 	}
 
 	if expires != 1 && expires != 7 && expires != 365 {
-		fieldErrors["expires"] = "O campo tem que ser igual a 1, 7 ou 365"
+		form.FieldErrors["expires"] = "O campo tem que ser igual a 1, 7 ou 365"
 	}
 
-	if len(fieldErrors) > 0 {
-		fmt.Fprint(w, fieldErrors)
-		return
+	if len(form.FieldErrors) > 0 {
+		data := newTemplateData()
+		data.Form = form
+		app.render(w, r, http.StatusUnprocessableEntity, "create.html", data)
 	}
 
-	id, err := app.snippets.Insert(title, content, expires)
+	id, err := app.snippets.Insert(form.Title, form.Content, form.Expires)
 	if err != nil {
 		app.serverError(w, r, err)
 		return
