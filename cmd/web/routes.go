@@ -17,5 +17,7 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("GET /snippet/create", app.snippetCreate)
 	mux.HandleFunc("POST /snippet/create", app.snippetCreatePost)
 
-	return alice.New(app.recoverPanic, app.logRequest, commomHeaders).Then(mux)
+	stantard := alice.New(app.recoverPanic, app.logRequest, commomHeaders)
+
+	return stantard.Then(mux)
 }
