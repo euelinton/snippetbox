@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/euelinton/snippetbox/internal/models"
+	"github.com/euelinton/snippetbox/internal/validator"
 )
 
 type snippetCreateForm struct {
@@ -16,6 +15,7 @@ type snippetCreateForm struct {
 	Content     string
 	Expires     int
 	FieldErrors map[string]string
+	validator.Validator
 }
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -82,21 +82,12 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		FieldErrors: map[string]string{},
 	}
 
-	if strings.TrimSpace(form.Title) == "" {
-		form.FieldErrors["title"] = "O campo não pode ser vazio"
-	} else if utf8.RuneCountInString(form.Title) > 100 {
-		form.FieldErrors["title"] = "O campo não pode ter mais de 100 caracteries"
-	}
+	form.CheckField(validator.NotBlank(form.Title), "title", "O campo não pode ser vazio")
+	form.CheckField(validator.MaxChars(form.Title, 100), "title", "O campo tem que ter menos que 100 caracteries")
+	form.CheckField(validator.NotBlank(form.Content), "content", "O campo não pode ser vazio")
+	form.CheckField(validator.PermittedValue(form.Expires, 1, 7, 365), "expires", "O campo tem que ser igual a 1, 7 ou 365")
 
-	if strings.TrimSpace(form.Content) == "" {
-		form.FieldErrors["content"] = "O campo não pode ser vazio"
-	}
-
-	if form.Expires != 1 && form.Expires != 7 && form.Expires != 365 {
-		form.FieldErrors["expires"] = "O campo tem que ser igual a 1, 7 ou 365"
-	}
-
-	if len(form.FieldErrors) > 0 {
+	if !form.Valid() {
 		data := newTemplateData()
 		data.Form = form
 		app.render(w, r, http.StatusUnprocessableEntity, "create.html", data)
