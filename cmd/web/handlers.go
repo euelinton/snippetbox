@@ -56,6 +56,9 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 	data := newTemplateData()
+	data.Form = snippetCreateForm{
+		Expires: 365,
+	}
 	app.render(w, r, http.StatusOK, "create.html", data)
 }
 
@@ -89,7 +92,7 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		form.FieldErrors["content"] = "O campo não pode ser vazio"
 	}
 
-	if expires != 1 && expires != 7 && expires != 365 {
+	if form.Expires != 1 && form.Expires != 7 && form.Expires != 365 {
 		form.FieldErrors["expires"] = "O campo tem que ser igual a 1, 7 ou 365"
 	}
 
@@ -97,6 +100,7 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		data := newTemplateData()
 		data.Form = form
 		app.render(w, r, http.StatusUnprocessableEntity, "create.html", data)
+		return
 	}
 
 	id, err := app.snippets.Insert(form.Title, form.Content, form.Expires)
